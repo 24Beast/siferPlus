@@ -7,8 +7,9 @@ from torch.utils.data import DataLoader
 
 # Class Definition
 class SiferPlus(nn.Module):
-    def __init__(self, models, optim_params):
+    def __init__(self, models, optim_params, device):
         super(SiferPlus, self).__init__()
+        self.device = device
         self.initModels(models)
         self.initOptimParams(optim_params)
 
@@ -18,15 +19,20 @@ class SiferPlus(nn.Module):
             if not (name in models):
                 raise KeyError(f"Model missing : {name} not found.")
         self.pre_model = models["PreModel"]
+        self.pre_model.to(self.device)
         self.aux_model = models["AuxModel"]
+        self.aux_model.to(self.device)
         self.main_model = models["MainModel"]
+        self.main_model.to(self.device)
 
     def initOptimParams(self, optim_params):
         self.mode = optim_params.get("Target", True)
         self.aux_lr = optim_params.get("AuxLR", 0.001)
         self.main_lr = optim_params.get("MainLR", 0.001)
         self.forget_lr = optim_params.get("ForgetGeneralLR", 0.01)
-        self.forget_target_weights = optim_params.get("ForgetTargetWeights", 5) # Try to adapt to multiple targets.
+        self.forget_target_weights = optim_params.get(
+            "ForgetTargetWeights", 5
+        )  # Try to adapt to multiple targets.
         self.general_num_classes = optim_params.get("GenNumClasses", 1)
         self.target_num_classes = optim_params.get("TargetNumClasses", 1)
         self.aux_optim = torch.optim.SGD(
@@ -63,7 +69,7 @@ class SiferPlus(nn.Module):
     def train(self, train_loader, train_params):
         num_epochs, forget_interval = self.initTrainParams(train_params)
         for epoch in range(1, num_epochs + 1):
-            last_loss = 0.0
+            print(f"Working on Epoch {epoch}")
             running_main_loss = 0.0
             running_aux_loss = 0.0
             running_target_loss = 0.0
@@ -73,6 +79,11 @@ class SiferPlus(nn.Module):
                 self.main_optim.zero_grad()
                 if self.mode:
                     inputs, labels, targets = data
+                    inputs = inputs.to(self.device)
+                    labels = labels.to(self.device)
+                    targets = targets.to(self.device)
+                    if len(targets.shape) == 1:
+                        targets = targets.reshape(-1, 1)
                 else:
                     inputs, labels = data
                 pre_out = self.pre_model(inputs)
@@ -87,12 +98,15 @@ class SiferPlus(nn.Module):
                     loss_aux = self.main_loss(aux_out, labels)
                     temp = loss_aux.item()
                     if self.mode:
-                        loss_aux = loss_aux + (self.forget_target_weights * self.target_loss(aux_target, targets))
+                        loss_aux = loss_aux + (
+                            self.forget_target_weights
+                            * self.target_loss(aux_target, targets)
+                        )
                         # loss_target.backward()
                     running_aux_loss += loss_aux.item()
                     running_target_loss += loss_aux.item() - temp
-                    loss_main.backward()
-                    loss_aux.backward()
+                    loss_main.backward(retain_graph=True)
+                    loss_aux.backward(retain_graph=True)
                     self.aux_optim.step()
                     self.main_optim.step()
                 else:
@@ -101,33 +115,42 @@ class SiferPlus(nn.Module):
                     targets[:, :] = 1 / targets.shape[1]
                     loss_forget = self.main_loss(aux_out, labels)
                     if self.mode:
-                        loss_aux = loss_aux + (self.forget_target_weights * self.target_loss(aux_target, targets))
+                        loss_aux = loss_aux + (
+                            self.forget_target_weights
+                            * self.target_loss(aux_target, targets)
+                        )
                         # loss_target.backward()
                     print(f"{loss_forget.item()=}")
-                    loss_forget.backward()
+                    loss_forget.backward(retain_graph=True)
                     self.forget_optim.step()
+                print(
+                    f"\rIteration {i}/{num_batches}: {running_main_loss=}, {running_aux_loss=}, {running_target_loss=}",
+                    end="",
+                )
 
 
 if __name__ == "__main__":
     from networks.models import PreModel, MainModel, AuxModel
     from utils.data import CelebATarget
-    
+
     B_SIZE = 128
+    DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     OPTIM_PARAMS = {
         "Target": True,
-        "AuxLR": 0.001,
-        "MainLR": 0.001,
-        "ForgetGeneralLR": 0.01,
-        "ForgetTargetWeights": 5, 
-        }
+        "AuxLR": 1e-5,
+        "MainLR": 1e-5,
+        "ForgetGeneralLR": 1e-4,
+        "ForgetTargetWeights": 5,
+    }
     TRAIN_PARAMS = {
         "NumEpochs": 100,
         "ForgetAfter": 0,
         "MainLoss": nn.CrossEntropyLoss(),
-        "TargetLoss": nn.BCELoss()
-        }
+        "TargetLoss": nn.BCELoss(),
+    }
 
     models = {"PreModel": PreModel(), "MainModel": MainModel(), "AuxModel": AuxModel()}
-    train_data = CelebATarget("./data/", split = "train")
-    train_dataloader = DataLoader(train_data, batch_size = B_SIZE, shuffle = True)
-    model = SiferPlus(models, OPTIM_PARAMS)
+    train_data = CelebATarget("./data/", split="train")
+    train_dataloader = DataLoader(train_data, batch_size=B_SIZE, shuffle=True)
+    model = SiferPlus(models, OPTIM_PARAMS, DEVICE)
+    model.train(train_dataloader, TRAIN_PARAMS)
