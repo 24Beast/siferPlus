@@ -6,6 +6,7 @@ from torch.nn import Conv2d, Linear, MaxPool2d, ReLU, Flatten, Softmax, Sigmoid
 # Constants
 MID_SIZE = 16000
 
+
 # Defining Modules
 class PreModel(nn.Module):
     def __init__(self):
@@ -14,7 +15,7 @@ class PreModel(nn.Module):
         self.conv2 = Conv2d(32, 128, 3)
         self.conv3 = Conv2d(128, 32, 3)
         self.flatten = Flatten()
-        self.pool = MaxPool2d(2,2)
+        self.pool = MaxPool2d(2, 2)
         self.relu = ReLU()
         self.sigmoid = Sigmoid()
 
@@ -39,11 +40,10 @@ class MainModel(nn.Module):
         self.linear2 = Linear(1024, 128)
         self.linear3 = Linear(128, 64)
         self.linear4 = Linear(64, 16)
-        self.linear5 = Linear(64, 4)
+        self.linear5 = Linear(16, 4)
         self.relu = ReLU()
         self.sigmoid = Sigmoid()
         self.softmax = Softmax()
-        
 
     def forward(self, x):
         x = self.linear1(x)
