@@ -1,4 +1,5 @@
 # Importing libraires
+import os
 import torch
 import numpy as np
 import torch.nn as nn
@@ -64,12 +65,15 @@ class SiferPlus(nn.Module):
         self.target_loss = train_params.get("TargetLoss", None)
         if not (callable(self.target_loss)) and (self.mode):
             raise ValueError("TargetLoss must be callable when target is present.")
-        return num_epochs, forget_interval
+        save_dir = train_params.get("SaveDir",f"./models/target_{self.forget_target_weights}_forget_{forget_interval}")
+        if not(os.path.isdir(save_dir)):
+            os.makedirs(save_dir)
+        return num_epochs, forget_interval, save_dir
 
     def train(self, train_loader, train_params):
-        num_epochs, forget_interval = self.initTrainParams(train_params)
+        num_epochs, forget_interval, save_dir = self.initTrainParams(train_params)
         for epoch in range(1, num_epochs + 1):
-            print(f"Working on Epoch {epoch}")
+            print(f"\nWorking on Epoch {epoch}")
             running_main_loss = 0.0
             running_aux_loss = 0.0
             running_target_loss = 0.0
@@ -124,9 +128,13 @@ class SiferPlus(nn.Module):
                     loss_forget.backward(retain_graph=True)
                     self.forget_optim.step()
                 print(
-                    f"\rIteration {i}/{num_batches}: {running_main_loss=}, {running_aux_loss=}, {running_target_loss=}",
+                    f"\rIteration {i}/{num_batches}: {running_main_loss/i=}, {running_aux_loss/i=}, {running_target_loss/i=}",
                     end="",
                 )
+            os.makedirs(os.path.join(save_dir,f"epoch_{epoch}"))
+            torch.save(self.pre_model,os.path.join(save_dir,f"epoch_{epoch}/pre.pth"))
+            torch.save(self.main_model,os.path.join(save_dir,f"epoch_{epoch}/main.pth"))
+            torch.save(self.aux_model,os.path.join(save_dir,f"epoch_{epoch}/aux.pth"))
 
 
 if __name__ == "__main__":
@@ -137,24 +145,23 @@ if __name__ == "__main__":
     DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     OPTIM_PARAMS = {
         "Target": True,
-        "AuxLR": 1e-5,
-        "MainLR": 1e-5,
-        "ForgetGeneralLR": 1e-4,
+        "AuxLR": 1e-3,
+        "MainLR": 1e-3,
+        "ForgetGeneralLR": 1e-2,
         "ForgetTargetWeights": 5,
     }
     TRAIN_PARAMS = {
-        "NumEpochs": 100,
+        "NumEpochs": 10,
         "ForgetAfter": 0,
         "MainLoss": nn.CrossEntropyLoss(),
         "TargetLoss": nn.BCELoss(),
     }
+    
+    TRAIN_PARAMS["SaveDir"] = f"./models/target_{OPTIM_PARAMS['ForgetTargetWeights']}_forget_{TRAIN_PARAMS['ForgetAfter']}"
+    # print(TRAIN_PARAMS["SaveDir"])
 
-    print("Initializing Models.")
     models = {"PreModel": PreModel(), "MainModel": MainModel(), "AuxModel": AuxModel()}
-    print("Loading Data.")
     train_data = CelebATarget("./data/", split="train")
     train_dataloader = DataLoader(train_data, batch_size=B_SIZE, shuffle=True)
-    print("Setting up SiferPlus.")
     model = SiferPlus(models, OPTIM_PARAMS, DEVICE)
-    print("Play Eye of the Tiger now!")
     model.train(train_dataloader, TRAIN_PARAMS)
