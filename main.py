@@ -103,7 +103,7 @@ class SiferPlus(nn.Module):
                             * self.target_loss(aux_target, targets)
                         )
                         # loss_target.backward()
-                    running_aux_loss += loss_aux.item()
+                    running_aux_loss += temp
                     running_target_loss += loss_aux.item() - temp
                     loss_main.backward(retain_graph=True)
                     loss_aux.backward(retain_graph=True)
@@ -149,8 +149,12 @@ if __name__ == "__main__":
         "TargetLoss": nn.BCELoss(),
     }
 
+    print("Initializing Models.")
     models = {"PreModel": PreModel(), "MainModel": MainModel(), "AuxModel": AuxModel()}
+    print("Loading Data.")
     train_data = CelebATarget("./data/", split="train")
     train_dataloader = DataLoader(train_data, batch_size=B_SIZE, shuffle=True)
+    print("Setting up SiferPlus.")
     model = SiferPlus(models, OPTIM_PARAMS, DEVICE)
+    print("Play Eye of the Tiger now!")
     model.train(train_dataloader, TRAIN_PARAMS)

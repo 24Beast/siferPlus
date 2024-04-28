@@ -16,7 +16,7 @@ class CelebATarget(Dataset):
         split="train",
     ):
         download=False
-        if(os.path.isdir(os.path.join(folder_path,"celeba/"))):
+        if not(os.path.isdir(os.path.join(folder_path,"celeba/"))):
            download = True
         self.data = CelebA(
             root=folder_path,
