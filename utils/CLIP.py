@@ -59,21 +59,27 @@ class CLIPAnnotator:
     
 if __name__ == "__main__":
     import time    
+    import argparse
     from PIL import Image
     
     DATA_DIR = "../data/celeba/img_align_celeba/"
     PROMPTS = ["Blonde", "Not Blonde"]
     
-    img_names = os.listdir(DATA_DIR)[:10]
+    ap = argparse.ArgumentParser()
+    ap.add_argument("-s", "--silent", required=False, action="store_true", help = "prevent image display during execution.", dest = "silent")
+    args = ap.parse_args()
+    
+    img_names = os.listdir(DATA_DIR)[:5]
     imgs = []
     for name in img_names:
         imgs.append(Image.open(DATA_DIR+name))
     
     annotator = CLIPAnnotator()
     probs = annotator.generateLabels(imgs, PROMPTS)
-    
+    print(f"{args.silent}")
     for num, img in enumerate(imgs):
-        img.show()
+        if not(args.silent):
+            img.show()
         print(f"Probability for img {num}: {probs[num]}")
         time.sleep(2)
 
