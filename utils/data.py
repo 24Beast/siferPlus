@@ -15,19 +15,19 @@ class CelebATarget(Dataset):
         target_transform=None,
         split="train",
     ):
-        download=False
-        if not(os.path.isdir(os.path.join(folder_path,"celeba/"))):
-           download = True
+        download = False
+        if not (os.path.isdir(os.path.join(folder_path, "celeba/"))):
+            download = True
         self.data = CelebA(
             root=folder_path,
             target_type="attr",
             transform=transform,
             target_transform=target_transform,
             split=split,
-            download = download
+            download=download,
         )
-        self.hair_pos = [8, 9, 11, 17] #! Black, Blonde, Brown, Gray
-        self.gender_pos = 20 #! Male 1, Female 0
+        self.hair_pos = [8, 9, 11, 17]  #! Black, Blonde, Brown, Gray
+        self.gender_pos = 20  #! Male 1, Female 0
 
     def __getitem__(self, index):
         img, label = self.data[index]

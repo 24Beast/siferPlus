@@ -2,14 +2,15 @@
 import os
 from transformers import CLIPProcessor, CLIPModel
 
+
 # CLIP Class
 class CLIPAnnotator:
-    
-    def __init__(self, model_name = "openai/clip-vit-base-patch32"):
+
+    def __init__(self, model_name="openai/clip-vit-base-patch32"):
         self.model = CLIPModel.from_pretrained(model_name)
         self.processor = CLIPProcessor.from_pretrained(model_name)
         self.valid_extns = ["png", "jpg", "jpeg"]
-        
+
     def generateLabels(self, imgs, prompts):
         """
         Parameters
@@ -22,16 +23,18 @@ class CLIPAnnotator:
         Returns
         -------
         probs : torch.tensor
-            Probabilities for each image prompt pair. 
+            Probabilities for each image prompt pair.
             Returns a matrix of size (num images, num prompts).
 
         """
-        inputs = self.processor(text=prompts, images=imgs, return_tensors="pt", padding=True)
+        inputs = self.processor(
+            text=prompts, images=imgs, return_tensors="pt", padding=True
+        )
         outputs = self.model(**inputs)
-        logits_per_image = outputs.logits_per_image  
-        probs = logits_per_image.softmax(dim=1)  
+        logits_per_image = outputs.logits_per_image
+        probs = logits_per_image.softmax(dim=1)
         return probs
-    
+
     def generateLabelsDir(self, img_dir, prompts):
         """
         Parameters
@@ -44,42 +47,49 @@ class CLIPAnnotator:
         Returns
         -------
         probs : torch.tensor
-            Probabilities for each image prompt pair. 
+            Probabilities for each image prompt pair.
             Returns a matrix of size (num images, num prompts).
 
         """
         img_names = os.listdir(img_dir)
         imgs = []
         for name in img_names:
-            if not(name.split(".")[-1] in self.valid_extns):
+            if not (name.split(".")[-1] in self.valid_extns):
                 continue
-            imgs.append(Image.open(img_dir+name))
+            imgs.append(Image.open(img_dir + name))
         probs = self.generateLabels(imgs, prompts)
         return probs
-    
+
+
 if __name__ == "__main__":
-    import time    
+    import time
     import argparse
     from PIL import Image
-    
+
     DATA_DIR = "../data/celeba/img_align_celeba/"
     PROMPTS = ["Blonde", "Not Blonde"]
-    
+
     ap = argparse.ArgumentParser()
-    ap.add_argument("-s", "--silent", required=False, action="store_true", help = "prevent image display during execution.", dest = "silent")
+    ap.add_argument(
+        "-s",
+        "--silent",
+        required=False,
+        action="store_true",
+        help="prevent image display during execution.",
+        dest="silent",
+    )
     args = ap.parse_args()
-    
+
     img_names = os.listdir(DATA_DIR)[:5]
     imgs = []
     for name in img_names:
-        imgs.append(Image.open(DATA_DIR+name))
-    
+        imgs.append(Image.open(DATA_DIR + name))
+
     annotator = CLIPAnnotator()
     probs = annotator.generateLabels(imgs, PROMPTS)
     print(f"{args.silent}")
     for num, img in enumerate(imgs):
-        if not(args.silent):
+        if not (args.silent):
             img.show()
         print(f"Probability for img {num}: {probs[num]}")
         time.sleep(2)
-

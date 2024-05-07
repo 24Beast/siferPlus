@@ -42,9 +42,11 @@ class SiferPlus(nn.Module):
         )
         self.main_optim = torch.optim.SGD(
             list(self.pre_model.parameters()) + list(self.main_model.parameters()),
-            lr=self.aux_lr, #! Change to self.main_lr
+            lr=self.aux_lr,  #! Change to self.main_lr
         )
-        self.forget_optim = torch.optim.SGD(self.pre_model.parameters(), lr=self.aux_lr) #! Change to self.forget_lr
+        self.forget_optim = torch.optim.SGD(
+            self.pre_model.parameters(), lr=self.aux_lr
+        )  #! Change to self.forget_lr
 
     def initTrainParams(self, train_params):
         try:
@@ -65,8 +67,11 @@ class SiferPlus(nn.Module):
         self.target_loss = train_params.get("TargetLoss", None)
         if not (callable(self.target_loss)) and (self.mode):
             raise ValueError("TargetLoss must be callable when target is present.")
-        save_dir = train_params.get("SaveDir",f"./models/target_{self.forget_target_weights}_forget_{forget_interval}")
-        if not(os.path.isdir(save_dir)):
+        save_dir = train_params.get(
+            "SaveDir",
+            f"./models/target_{self.forget_target_weights}_forget_{forget_interval}",
+        )
+        if not (os.path.isdir(save_dir)):
             os.makedirs(save_dir)
         return num_epochs, forget_interval, save_dir
 
@@ -131,10 +136,12 @@ class SiferPlus(nn.Module):
                     f"\rIteration {i}/{num_batches}: {running_main_loss/i=}, {running_aux_loss/i=}, {running_target_loss/i=}",
                     end="",
                 )
-            os.makedirs(os.path.join(save_dir,f"epoch_{epoch}"))
-            torch.save(self.pre_model,os.path.join(save_dir,f"epoch_{epoch}/pre.pth"))
-            torch.save(self.main_model,os.path.join(save_dir,f"epoch_{epoch}/main.pth"))
-            torch.save(self.aux_model,os.path.join(save_dir,f"epoch_{epoch}/aux.pth"))
+            os.makedirs(os.path.join(save_dir, f"epoch_{epoch}"))
+            torch.save(self.pre_model, os.path.join(save_dir, f"epoch_{epoch}/pre.pth"))
+            torch.save(
+                self.main_model, os.path.join(save_dir, f"epoch_{epoch}/main.pth")
+            )
+            torch.save(self.aux_model, os.path.join(save_dir, f"epoch_{epoch}/aux.pth"))
 
 
 if __name__ == "__main__":
@@ -156,8 +163,10 @@ if __name__ == "__main__":
         "MainLoss": nn.CrossEntropyLoss(),
         "TargetLoss": nn.BCELoss(),
     }
-    
-    TRAIN_PARAMS["SaveDir"] = f"./models/target_{OPTIM_PARAMS['ForgetTargetWeights']}_forget_{TRAIN_PARAMS['ForgetAfter']}"
+
+    TRAIN_PARAMS["SaveDir"] = (
+        f"./models/target_{OPTIM_PARAMS['ForgetTargetWeights']}_forget_{TRAIN_PARAMS['ForgetAfter']}"
+    )
     # print(TRAIN_PARAMS["SaveDir"])
 
     models = {"PreModel": PreModel(), "MainModel": MainModel(), "AuxModel": AuxModel()}

@@ -14,4 +14,4 @@ module load mamba/latest
 
 source activate SiferPlus
 
-python3 main.py
+python3 sifer_plus.py
