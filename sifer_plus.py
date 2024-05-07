@@ -188,7 +188,7 @@ class SiferPlus(nn.Module):
 
 
 if __name__ == "__main__":
-    from networks.models import PreModel, MainModel, AuxModel
+    from networks.resnet_models import PreModel, MainModel, AuxModel
     from utils.data import CelebATarget
 
     B_SIZE = 256
