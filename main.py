@@ -42,9 +42,9 @@ class SiferPlus(nn.Module):
         )
         self.main_optim = torch.optim.SGD(
             list(self.pre_model.parameters()) + list(self.main_model.parameters()),
-            lr=self.aux_lr,
+            lr=self.aux_lr, #! Change to self.main_lr
         )
-        self.forget_optim = torch.optim.SGD(self.pre_model.parameters(), lr=self.aux_lr)
+        self.forget_optim = torch.optim.SGD(self.pre_model.parameters(), lr=self.aux_lr) #! Change to self.forget_lr
 
     def initTrainParams(self, train_params):
         try:

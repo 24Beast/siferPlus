@@ -26,8 +26,8 @@ class CelebATarget(Dataset):
             split=split,
             download = download
         )
-        self.hair_pos = [8, 9, 11, 17]
-        self.gender_pos = 20
+        self.hair_pos = [8, 9, 11, 17] #! Black, Blonde, Brown, Gray
+        self.gender_pos = 20 #! Male 1, Female 0
 
     def __getitem__(self, index):
         img, label = self.data[index]
